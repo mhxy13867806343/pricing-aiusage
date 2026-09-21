@@ -1,18 +1,36 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  ConfigProvider,
+  theme as antdTheme,
+  Input,
+  Select,
+  Button,
+  Spin,
+  Empty,
+  FloatButton,
+} from 'antd';
+import {
+  SearchOutlined,
+  SunOutlined,
+  MoonOutlined,
+  CaretUpOutlined,
+  CaretDownOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import './App.css';
 import { ModelItem, ProviderInfo, SortConfig, ApiResponse, SortColumn } from './types';
 import { resolveProvider, getModelShortName, INVERT_DARK_ICONS } from './constants/providers';
 import { PROVIDER_ICONS } from './constants/icons';
 import { formatPrice } from './utils/format';
 
-const SORT_LABELS: Record<string, string> = {
-  'inputOutput:descending': '输入价格：从高到低',
-  'inputOutput:ascending': '输入价格：从低到高',
-  'model:ascending': '模型名称：A → Z',
-  'model:descending': '模型名称：Z → A',
-  'cache:descending': '缓存价格：从高到低',
-  'cache:ascending': '缓存价格：从低到高',
-};
+const SORT_OPTIONS = [
+  { value: 'inputOutput:descending', label: '输入价格：从高到低' },
+  { value: 'inputOutput:ascending', label: '输入价格：从低到高' },
+  { value: 'model:ascending', label: '模型名称：A → Z' },
+  { value: 'model:descending', label: '模型名称：Z → A' },
+  { value: 'cache:descending', label: '缓存价格：从高到低' },
+  { value: 'cache:ascending', label: '缓存价格：从低到高' },
+];
 
 export const App: React.FC = () => {
   const [allModels, setAllModels] = useState<ModelItem[]>([]);
@@ -26,8 +44,6 @@ export const App: React.FC = () => {
     direction: 'descending',
   });
 
-  const [providerDropdownOpen, setProviderDropdownOpen] = useState<boolean>(false);
-  const [sortDropdownOpen, setSortDropdownOpen] = useState<boolean>(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('theme');
     if (saved === 'dark' || saved === 'light') return saved;
@@ -36,12 +52,7 @@ export const App: React.FC = () => {
       : 'light';
   });
 
-  const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
-
-  const providerRef = useRef<HTMLDivElement>(null);
-  const sortRef = useRef<HTMLDivElement>(null);
-
-  // Sync theme attribute
+  // Sync theme attribute with body & localStorage
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
@@ -51,43 +62,14 @@ export const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Click outside to close dropdowns
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (providerRef.current && !providerRef.current.contains(e.target as Node)) {
-        setProviderDropdownOpen(false);
-      }
-      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
-        setSortDropdownOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  // Back to top scroll listener
-  useEffect(() => {
-    const handleScroll = () => {
-      const top = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      setShowBackToTop(top > 80);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
-    return () => window.removeEventListener('scroll', handleScroll, { capture: true });
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
-    document.body.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   // Fetch real online data
   const fetchData = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
 
     // In local dev with Vite dev server, use proxy to eliminate CORS
-    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isLocalDev =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const targetUrl = isLocalDev
       ? '/aiusage_api/functions/tud-pricing'
       : 'https://api.juejin.cn/aiusage_api/functions/tud-pricing';
@@ -96,7 +78,7 @@ export const App: React.FC = () => {
       const res = await fetch(targetUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
@@ -154,7 +136,7 @@ export const App: React.FC = () => {
       if (q && !item.model.toLowerCase().includes(q)) {
         return false;
       }
-      if (selectedProvider && selectedProvider !== 'all') {
+      if (selectedProvider && selectedProvider !== '') {
         if (item.provider.key !== selectedProvider) {
           return false;
         }
@@ -224,10 +206,19 @@ export const App: React.FC = () => {
   };
 
   const currentSortKey = `${sortConfig.column}:${sortConfig.direction}`;
-  const selectedProviderObj = availableProviders.find((p) => p.key === selectedProvider);
 
   return (
-    <>
+    <ConfigProvider
+      theme={{
+        algorithm: theme === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#1e80ff',
+          borderRadius: 8,
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+        },
+      }}
+    >
       {/* Top Header */}
       <header className="app-header">
         <div className="header-container">
@@ -246,33 +237,13 @@ export const App: React.FC = () => {
           </div>
 
           <div className="header-right">
-            <button
-              type="button"
-              className="theme-toggle-btn"
+            <Button
+              type="text"
+              shape="circle"
+              icon={theme === 'dark' ? <SunOutlined style={{ fontSize: 16 }} /> : <MoonOutlined style={{ fontSize: 16 }} />}
               onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
               title="切换深色/浅色模式"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            </button>
+            />
           </div>
         </div>
       </header>
@@ -294,169 +265,85 @@ export const App: React.FC = () => {
           <div className="meta-units">单位：USD / 1M Tokens</div>
         </div>
 
-        {/* Toolbar */}
+        {/* Ant Design Filter Toolbar */}
         <div className="toolbar" aria-label="价格筛选条件">
-          {/* Search Box */}
+          {/* 1. Ant Design Search Input */}
           <div className="search-box">
-            <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="text"
-              className="search-input"
+            <Input
+              prefix={<SearchOutlined style={{ color: 'var(--text-muted)' }} />}
               placeholder="模糊查询模型"
+              allowClear
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
+              style={{ height: 36 }}
             />
-            {searchQuery && (
-              <button
-                type="button"
-                className="search-clear-btn"
-                style={{ display: 'block' }}
-                onClick={() => setSearchQuery('')}
-                title="清空搜索"
-              >
-                ✕
-              </button>
-            )}
           </div>
 
-          {/* Provider Dropdown */}
-          <div className={`dropdown ${providerDropdownOpen ? 'open' : ''}`} ref={providerRef}>
-            <div
-              className="dropdown-trigger"
-              onClick={() => {
-                setSortDropdownOpen(false);
-                setProviderDropdownOpen((v) => !v);
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {selectedProviderObj ? (
-                  <>
-                    {renderProviderIcon(selectedProviderObj, 14)}
-                    <span>{selectedProviderObj.label}</span>
-                  </>
-                ) : (
-                  '全部供应商'
-                )}
-              </span>
-              <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-            {providerDropdownOpen && (
-              <div className="dropdown-menu">
-                <div
-                  className={`dropdown-item ${!selectedProvider ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedProvider('');
-                    setProviderDropdownOpen(false);
-                  }}
-                >
-                  <span className="dropdown-item-check">{!selectedProvider ? '✓' : '\u00A0'}</span>
-                  <span className="dropdown-item-icon">🌐</span>
-                  <span>全部供应商</span>
-                  <span className="dropdown-item-count">{allModels.length}</span>
-                </div>
-                {availableProviders.map((p) => {
-                  const isActive = selectedProvider === p.key;
-                  return (
-                    <div
-                      key={p.key}
-                      className={`dropdown-item ${isActive ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedProvider(p.key);
-                        setProviderDropdownOpen(false);
-                      }}
-                    >
-                      <span className="dropdown-item-check">{isActive ? '✓' : '\u00A0'}</span>
-                      <span className="dropdown-item-icon">{renderProviderIcon(p, 16)}</span>
+          {/* 2. Ant Design Provider Select */}
+          <Select
+            value={selectedProvider || ''}
+            onChange={(val) => setSelectedProvider(val)}
+            style={{ width: 170, height: 36 }}
+            options={[
+              {
+                value: '',
+                label: (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>🌐</span> 全部供应商
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{allModels.length}</span>
+                  </div>
+                ),
+              },
+              ...availableProviders.map((p) => ({
+                value: p.key,
+                label: (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {renderProviderIcon(p, 14)}
                       <span>{p.label}</span>
-                      <span className="dropdown-item-count">{p.count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.count}</span>
+                  </div>
+                ),
+              })),
+            ]}
+          />
 
-          {/* Sort Dropdown */}
-          <div className={`dropdown ${sortDropdownOpen ? 'open' : ''}`} ref={sortRef}>
-            <div
-              className="dropdown-trigger"
-              onClick={() => {
-                setProviderDropdownOpen(false);
-                setSortDropdownOpen((v) => !v);
-              }}
-            >
-              <span>{SORT_LABELS[currentSortKey] || '排序'}</span>
-              <svg className="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-            {sortDropdownOpen && (
-              <div className="dropdown-menu">
-                {Object.entries(SORT_LABELS).map(([val, label]) => {
-                  const isActive = val === currentSortKey;
-                  return (
-                    <div
-                      key={val}
-                      className={`dropdown-item ${isActive ? 'active' : ''}`}
-                      onClick={() => {
-                        const [col, dir] = val.split(':');
-                        setSortConfig({
-                          column: col as SortColumn,
-                          direction: dir as 'ascending' | 'descending',
-                        });
-                        setSortDropdownOpen(false);
-                      }}
-                    >
-                      <span className="dropdown-item-check">{isActive ? '✓' : '\u00A0'}</span>
-                      <span>{label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* 3. Ant Design Sort Select */}
+          <Select
+            value={currentSortKey}
+            onChange={(val) => {
+              const [col, dir] = val.split(':');
+              setSortConfig({
+                column: col as SortColumn,
+                direction: dir as 'ascending' | 'descending',
+              });
+            }}
+            style={{ width: 180, height: 36 }}
+            options={SORT_OPTIONS}
+          />
         </div>
 
-        {/* Loading Skeleton */}
+        {/* Loading State */}
         {loading && (
-          <div className="table-container">
-            <div className="skeleton-row" style={{ height: 48, background: 'var(--bg-surface-secondary)' }}>
-              <div className="skeleton-shimmer" style={{ width: 120, height: 16 }} />
-              <div className="skeleton-shimmer" style={{ width: 160, height: 16, marginLeft: 'auto' }} />
-            </div>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="skeleton-row">
-                <div className="skeleton-shimmer" style={{ width: 36, height: 36, borderRadius: 8 }} />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div className="skeleton-shimmer" style={{ width: '40%', height: 16 }} />
-                  <div className="skeleton-shimmer" style={{ width: '60%', height: 12 }} />
-                </div>
-                <div className="skeleton-shimmer" style={{ width: 100, height: 32 }} />
-              </div>
-            ))}
+          <div style={{ padding: '60px 0', textAlign: 'center' }}>
+            <Spin size="large" tip="正在加载最新模型价格数据..." />
           </div>
         )}
 
         {/* Error State */}
         {!loading && errorMsg && (
           <div className="state-container">
-            <svg className="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div className="state-title">{errorMsg}</div>
-            <div className="state-subtitle">如遇到跨域拦截，请在本地通过 Vite 运行或配置代理后访问</div>
-            <button type="button" className="btn-primary" onClick={fetchData}>
-              重试
-            </button>
+            <Empty
+              description={<span style={{ color: 'var(--text-secondary)' }}>{errorMsg}</span>}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            >
+              <Button type="primary" icon={<ReloadOutlined />} onClick={fetchData}>
+                重试加载
+              </Button>
+            </Empty>
           </div>
         )}
 
@@ -465,12 +352,7 @@ export const App: React.FC = () => {
           <>
             {filteredModels.length === 0 ? (
               <div className="state-container">
-                <svg className="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <div className="state-title">没有匹配的模型</div>
-                <div className="state-subtitle">请尝试其他关键词或更换供应商筛选条件</div>
+                <Empty description="没有匹配的模型，请尝试其他关键词或更换供应商" />
               </div>
             ) : (
               <>
@@ -484,28 +366,20 @@ export const App: React.FC = () => {
                             <span className="th-content">
                               <span>模型</span>
                               <span className="sort-arrows">
-                                <svg
-                                  className={`arrow-up ${
+                                <CaretUpOutlined
+                                  className={
                                     sortConfig.column === 'model' && sortConfig.direction === 'ascending'
                                       ? 'arrow-active'
                                       : ''
-                                  }`}
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M12 4L4 16H20L12 4Z" />
-                                </svg>
-                                <svg
-                                  className={`arrow-down ${
+                                  }
+                                />
+                                <CaretDownOutlined
+                                  className={
                                     sortConfig.column === 'model' && sortConfig.direction === 'descending'
                                       ? 'arrow-active'
                                       : ''
-                                  }`}
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M12 20L20 8H4L12 20Z" />
-                                </svg>
+                                  }
+                                />
                               </span>
                             </span>
                           </th>
@@ -517,28 +391,20 @@ export const App: React.FC = () => {
                             <span className="th-content">
                               <span>输入 / 输出</span>
                               <span className="sort-arrows">
-                                <svg
-                                  className={`arrow-up ${
+                                <CaretUpOutlined
+                                  className={
                                     sortConfig.column === 'inputOutput' && sortConfig.direction === 'ascending'
                                       ? 'arrow-active'
                                       : ''
-                                  }`}
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M12 4L4 16H20L12 4Z" />
-                                </svg>
-                                <svg
-                                  className={`arrow-down ${
+                                  }
+                                />
+                                <CaretDownOutlined
+                                  className={
                                     sortConfig.column === 'inputOutput' && sortConfig.direction === 'descending'
                                       ? 'arrow-active'
                                       : ''
-                                  }`}
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M12 20L20 8H4L12 20Z" />
-                                </svg>
+                                  }
+                                />
                               </span>
                             </span>
                           </th>
@@ -546,28 +412,20 @@ export const App: React.FC = () => {
                             <span className="th-content">
                               <span>缓存</span>
                               <span className="sort-arrows">
-                                <svg
-                                  className={`arrow-up ${
+                                <CaretUpOutlined
+                                  className={
                                     sortConfig.column === 'cache' && sortConfig.direction === 'ascending'
                                       ? 'arrow-active'
                                       : ''
-                                  }`}
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M12 4L4 16H20L12 4Z" />
-                                </svg>
-                                <svg
-                                  className={`arrow-down ${
+                                  }
+                                />
+                                <CaretDownOutlined
+                                  className={
                                     sortConfig.column === 'cache' && sortConfig.direction === 'descending'
                                       ? 'arrow-active'
                                       : ''
-                                  }`}
-                                  viewBox="0 0 24 24"
-                                  fill="currentColor"
-                                >
-                                  <path d="M12 20L20 8H4L12 20Z" />
-                                </svg>
+                                  }
+                                />
                               </span>
                             </span>
                           </th>
@@ -694,26 +552,12 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Back to Top Floating Button */}
-      <button
-        type="button"
-        className={`back-to-top-btn ${showBackToTop ? 'visible' : ''}`}
-        onClick={scrollToTop}
-        title="返回顶部"
-        aria-label="返回顶部"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="18 15 12 9 6 15" />
-        </svg>
-        <span className="btn-label">顶部</span>
-      </button>
-    </>
+      {/* Ant Design FloatButton for Back to Top */}
+      <FloatButton.BackTop
+        visibilityHeight={80}
+        style={{ right: 24, bottom: 75, zIndex: 99999 }}
+        tooltip="返回顶部"
+      />
+    </ConfigProvider>
   );
 };
