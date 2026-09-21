@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI 模型价格 - AI Usage Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Header (Clean: Brand & Theme Toggle Only) -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="header-left">
+        <div class="brand-logo">
+          <div class="brand-icon">
+            <!-- Juejin Origami Logo -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 9.5L4.5 11.5L12 6L19.5 11.5L22 9.5L12 2Z" fill="#1E80FF"/>
+              <path d="M12 9.2L6 13.8L7.5 15L12 11.6L16.5 15L18 13.8L12 9.2Z" fill="#1E80FF"/>
+              <path d="M12 15L9 17.3L9.8 18L12 16.3L14.2 18L15 17.3L12 15Z" fill="#1E80FF"/>
+            </svg>
+          </div>
+          <span class="brand-title">AI Usage Dashboard</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Dark/Light Theme Toggle -->
+        <button type="button" class="theme-toggle-btn" id="themeToggleBtn" title="切换深色/浅色模式">
+          <svg class="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Body Content -->
+  <main class="main-content">
+
+    <!-- Page Title & Meta -->
+    <div class="page-header-row">
+      <div class="page-title">
+        <span>模型价格</span>
+        <span class="meta-count" id="modelCountText">加载中...</span>
+      </div>
+      <div class="meta-units">
+        单位：USD / 1M Tokens
+      </div>
+    </div>
+
+    <!-- Filter & Search Toolbar (Auto-responsive, includes Sort on both PC & Mobile) -->
+    <div class="toolbar" aria-label="价格筛选条件">
+      <!-- 1. Search Field -->
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="模糊查询模型" autocomplete="off" spellcheck="false">
+        <button type="button" class="search-clear-btn" id="searchClearBtn" title="清空搜索">✕</button>
+      </div>
+
+      <!-- 2. Provider Filter Dropdown -->
+      <div class="dropdown" id="providerDropdown">
+        <div class="dropdown-trigger" id="providerDropdownTrigger">
+          <span id="providerTriggerLabel" style="display:flex;align-items:center;gap:6px;">全部供应商</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="dropdown-menu" id="providerDropdownMenu">
+          <!-- Dynamically populated by app.js -->
+        </div>
+      </div>
+
+      <!-- 3. Sort Dropdown (Visible on BOTH PC and Mobile) -->
+      <div class="dropdown" id="sortDropdown">
+        <div class="dropdown-trigger" id="sortDropdownTrigger">
+          <span id="sortTriggerLabel">输入价格：从高到低</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+        <div class="dropdown-menu" id="sortDropdownMenu">
+          <div class="dropdown-item active" data-value="inputOutput:descending">
+            <span class="dropdown-item-check">✓</span>
+            <span>输入价格：从高到低</span>
+          </div>
+          <div class="dropdown-item" data-value="inputOutput:ascending">
+            <span class="dropdown-item-check">&nbsp;</span>
+            <span>输入价格：从低到高</span>
+          </div>
+          <div class="dropdown-item" data-value="model:ascending">
+            <span class="dropdown-item-check">&nbsp;</span>
+            <span>模型名称：A → Z</span>
+          </div>
+          <div class="dropdown-item" data-value="model:descending">
+            <span class="dropdown-item-check">&nbsp;</span>
+            <span>模型名称：Z → A</span>
+          </div>
+          <div class="dropdown-item" data-value="cache:descending">
+            <span class="dropdown-item-check">&nbsp;</span>
+            <span>缓存价格：从高到低</span>
+          </div>
+          <div class="dropdown-item" data-value="cache:ascending">
+            <span class="dropdown-item-check">&nbsp;</span>
+            <span>缓存价格：从低到高</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Skeleton View -->
+    <div id="loadingSkeleton" style="display: none;">
+      <div class="table-container">
+        <div class="skeleton-row" style="height: 48px; background: var(--bg-surface-secondary);">
+          <div class="skeleton-shimmer" style="width: 120px; height: 16px;"></div>
+          <div class="skeleton-shimmer" style="width: 160px; height: 16px; margin-left: auto;"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skeleton-shimmer" style="width: 36px; height: 36px; border-radius: 8px;"></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div class="skeleton-shimmer" style="width: 180px; height: 16px;"></div>
+            <div class="skeleton-shimmer" style="width: 260px; height: 12px;"></div>
+          </div>
+          <div class="skeleton-shimmer" style="width: 100px; height: 32px;"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skeleton-shimmer" style="width: 36px; height: 36px; border-radius: 8px;"></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div class="skeleton-shimmer" style="width: 140px; height: 16px;"></div>
+            <div class="skeleton-shimmer" style="width: 220px; height: 12px;"></div>
+          </div>
+          <div class="skeleton-shimmer" style="width: 100px; height: 32px;"></div>
+        </div>
+        <div class="skeleton-row">
+          <div class="skeleton-shimmer" style="width: 36px; height: 36px; border-radius: 8px;"></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div class="skeleton-shimmer" style="width: 200px; height: 16px;"></div>
+            <div class="skeleton-shimmer" style="width: 240px; height: 12px;"></div>
+          </div>
+          <div class="skeleton-shimmer" style="width: 100px; height: 32px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State View -->
+    <div id="errorState" class="state-container" style="display: none;">
+      <svg class="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <div class="state-title" id="errorMessage">模型价格加载失败</div>
+      <div class="state-subtitle">网络连接异常或接口受限，请稍后重试</div>
+      <button type="button" class="btn-primary" id="retryBtn">重试</button>
+    </div>
+
+    <!-- 1. PC (Desktop) Table View (Automatically shown on screens > 768px) -->
+    <section class="pc-view" id="pcView">
+      <div class="table-container" id="pcTableContainer">
+        <table class="pricing-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-column="model" style="width: 50%;">
+                <span class="th-content">
+                  <span>模型</span>
+                  <span class="sort-arrows">
+                    <svg class="arrow-up" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4L4 16H20L12 4Z"/></svg>
+                    <svg class="arrow-down" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L20 8H4L12 20Z"/></svg>
+                  </span>
+                </span>
+              </th>
+              <th class="sortable" data-column="inputOutput" style="width: 26%;">
+                <span class="th-content">
+                  <span>输入 / 输出</span>
+                  <span class="sort-arrows">
+                    <svg class="arrow-up" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4L4 16H20L12 4Z"/></svg>
+                    <svg class="arrow-down" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L20 8H4L12 20Z"/></svg>
+                  </span>
+                </span>
+              </th>
+              <th class="sortable" data-column="cache" style="width: 24%;">
+                <span class="th-content">
+                  <span>缓存</span>
+                  <span class="sort-arrows">
+                    <svg class="arrow-up" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4L4 16H20L12 4Z"/></svg>
+                    <svg class="arrow-down" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L20 8H4L12 20Z"/></svg>
+                  </span>
+                </span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="pcTableBody">
+            <!-- Dynamically populated by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State for PC -->
+      <div id="pcEmptyState" class="state-container" style="display: none;">
+        <svg class="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <div class="state-title">没有匹配的模型</div>
+        <div class="state-subtitle">请尝试其他关键词或更换供应商筛选条件</div>
+      </div>
+    </section>
+
+    <!-- 2. Mobile (Phone/Tablet) Card View (Automatically shown on screens <= 768px) -->
+    <section class="mobile-view" id="mobileView">
+      <div class="mobile-cards-grid" id="mobileCardsContainer">
+        <!-- Dynamically populated by app.js -->
+      </div>
+
+      <!-- Empty State for Mobile -->
+      <div id="mobileEmptyState" class="state-container" style="display: none;">
+        <svg class="state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <div class="state-title">没有匹配的模型</div>
+        <div class="state-subtitle">请尝试其他关键词</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Back to Top Floating Button (High visibility) -->
+  <button type="button" class="back-to-top-btn" id="backToTopBtn" title="返回顶部" aria-label="返回顶部">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+    <span class="btn-label">顶部</span>
+  </button>
+
+  <!-- Dependencies -->
+  <script src="jquery.min.js"></script>
+  <script src="icons.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
