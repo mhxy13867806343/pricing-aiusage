@@ -44,11 +44,9 @@
 pricing-aiusage/
 ├── index.html         # 核心页面结构（表格、卡片流、工具栏、置顶按钮）
 ├── style.css          # 全局样式（布局、响应式媒体查询、主题配色、动画）
-├── app.js             # 业务逻辑（API 请求、数据正则归类、双端渲染、事件绑定）
+├── app.js             # 业务逻辑（直接发起 $.ajax 请求真实掘金接口、双端渲染、事件绑定）
 ├── icons.js           # 厂商矢量 SVG 图标集映射表
-├── data.js            # 预置离线高可用模型价格数据集
-├── jquery.min.js      # 本地 jQuery 脚本库（离线直接可用）
-├── tud-pricing.json   # 原始定价数据备份文件
+├── jquery.min.js      # 本地 jQuery 脚本库（无任何第三方框架）
 ├── LICENSE            # 开源许可证（MIT License）
 └── README.md          # 项目文档说明
 ```

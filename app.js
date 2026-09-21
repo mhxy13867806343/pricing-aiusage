@@ -6,7 +6,6 @@
 $(function () {
   // --- Constants & Provider Mapping ---
   const API_ENDPOINT = "https://api.juejin.cn/aiusage_api/functions/tud-pricing";
-  const LOCAL_FALLBACK = "tud-pricing.json";
 
   const PROVIDER_DEFS = {
     ai21: { label: "AI21 Labs", icon: "ai21" },
@@ -463,49 +462,44 @@ $(function () {
     }
   }
 
-  // --- Data Loading via jQuery Ajax with instant fallback ---
+  // --- Data Loading: Direct Real Online API via jQuery ---
   function loadPricingData() {
-    // If we have bundled PRICING_DATA, render immediately with zero delay
-    if (window.PRICING_DATA && window.PRICING_DATA.exact) {
-      processPricingResponse(window.PRICING_DATA);
-    } else {
-      $("#loadingSkeleton").show();
-      $("#errorState").hide();
-      $("#pcTableContainer").hide();
-      $("#mobileCardsContainer").hide();
-    }
+    $("#loadingSkeleton").show();
+    $("#errorState").hide();
+    $("#pcTableContainer").hide();
+    $("#mobileCardsContainer").hide();
 
-    // Now fetch fresh data from remote API
     $.ajax({
       url: API_ENDPOINT,
       method: "GET",
       dataType: "json",
-      timeout: 5000
+      timeout: 10000
     })
     .done(function (data) {
       if (data && data.exact) {
         processPricingResponse(data);
+      } else {
+        showError("返回数据格式不符合预期");
       }
     })
     .fail(function (xhr, status, error) {
-      // If we don't have allModels yet, attempt local json
-      if (allModels.length === 0) {
-        $.ajax({
-          url: LOCAL_FALLBACK,
-          method: "GET",
-          dataType: "json"
-        })
-        .done(function (localData) {
-          processPricingResponse(localData);
-        })
-        .fail(function (xhr2, status2, error2) {
-          console.error("All data loading attempts failed:", error2);
-          $("#loadingSkeleton").hide();
-          $("#errorMessage").text(`数据获取失败: ${error || error2 || '网络异常'}`);
-          $("#errorState").show();
-        });
+      console.error("API request failed:", status, error);
+      let msg = "接口请求失败";
+      if (status === "timeout") {
+        msg = "请求超时，请检查网络连接";
+      } else if (xhr.status === 0) {
+        msg = "跨域访问受限 (CORS) 或网络中断。掘金 API 服务端仅允许 localhost/127.0.0.1 及掘金域名跨域访问。";
+      } else {
+        msg = `HTTP ${xhr.status}: ${error || '请求异常'}`;
       }
+      showError(msg);
     });
+  }
+
+  function showError(msg) {
+    $("#loadingSkeleton").hide();
+    $("#errorMessage").text(msg);
+    $("#errorState").show();
   }
 
   function processPricingResponse(data) {
