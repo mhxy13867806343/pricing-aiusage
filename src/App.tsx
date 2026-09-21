@@ -67,20 +67,28 @@ export const App: React.FC = () => {
     setLoading(true);
     setErrorMsg(null);
 
-    // In local dev with Vite dev server, use proxy to eliminate CORS
     const isLocalDev =
       window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    // 1. In local dev: use Vite dev proxy to fetch live Juejin API without CORS
+    // 2. On GitHub Pages: use same-origin ./pricing.json (synced from real Juejin API by GitHub Actions) to eliminate CORS restrictions
+    const baseUrl = import.meta.env.BASE_URL || './';
     const targetUrl = isLocalDev
       ? '/aiusage_api/functions/tud-pricing'
-      : 'https://api.juejin.cn/aiusage_api/functions/tud-pricing';
+      : `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}pricing.json`;
 
     try {
-      const res = await fetch(targetUrl, {
+      let res = await fetch(targetUrl, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
         },
       });
+
+      // If failed, fallback to relative pricing.json
+      if (!res.ok && targetUrl !== './pricing.json') {
+        res = await fetch('./pricing.json');
+      }
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: 请求失败`);
@@ -106,7 +114,7 @@ export const App: React.FC = () => {
       setLoading(false);
     } catch (err: unknown) {
       console.error('Fetch error:', err);
-      const msg = err instanceof Error ? err.message : '网络或跨域受限 (CORS)';
+      const msg = err instanceof Error ? err.message : '数据请求异常';
       setErrorMsg(`数据获取失败: ${msg}`);
       setLoading(false);
     }

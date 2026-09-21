@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  schedule:
+    # Auto-fetch latest pricing data from Juejin every 6 hours
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -30,6 +33,12 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+
+      - name: Fetch latest live pricing data from Juejin API (Server-side, No CORS)
+        run: |
+          mkdir -p public
+          curl -sSL "https://api.juejin.cn/aiusage_api/functions/tud-pricing" -o public/pricing.json
+          echo "Successfully fetched real Juejin API pricing data into public/pricing.json"
 
       - name: Install dependencies
         run: npm ci
